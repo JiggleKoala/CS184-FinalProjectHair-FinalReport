@@ -5,6 +5,7 @@
     <style>
         body {
             padding: 50px;
+            padding-top: 40px;
             width: 1000px;
             margin: auto;
             text-align: left;
@@ -14,6 +15,9 @@
         }
         h1, h2, h3, h4, h5 {
             font-family: 'Source Sans Pro', sans-serif;
+        }
+        h5 {
+            margin-top: 20px !important;
         }
         ol {
             list-style-type: decimal;
@@ -30,9 +34,7 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
     <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-    <!-- jQuery library -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <!-- Latest compiled JavaScript -->
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 </head>
 
@@ -47,22 +49,21 @@
     <div class="container">
         <h3>Abstract</h3>
         <p>
-            In this project, we set out to build custom BSDFs on top of the Mitsuba Renderer in order to
+            In this project we set out to render hair realistically both statically and dynamically, with varying and gorgeous results. For static rendering such as the <a href="#kkay">Kajiya-Kay [1]</a> and <a href="#marsch">Marschner model [7]</a>, we built custom BSDFs on top of the <a href="#mitsuba">Mitsuba Renderer [2]</a> in order to
             realistically render hair. Using the existing framework, which provided simple ray-hair intersection
-            functionality, we successfully implemented Kajiya Kay hair rendering. Further, we explored WebGL dynamic
-            fur shading using three.js, and built a web-hosted interactive demo.
+            functionality, we successfully implemented Kajiya Kay model, and made progress in the Marschner model. As our stretch goal, we explored GLSL dynamic fur shading using WebGL and <a href="#three">three.js</a>, and even built an <a href="http://nickshen.me/184proj/web-fur"  target="_blank">interactive fur demo</a>.
         </p>
 
         <hr>
+
         <h3>Technical Approach</h3>
+        <h5>Static Rendering</h5>
         <p>
-            We created a brand new BSDF in Mitsuba. Mitsuba provided the framework for ray tracing and hair
-            intersection. Mitsuba came with a Kajiya Kay styled phase function. However, this is not a fully
-            functional BSDF, and did not match up with the paper we read. Thus, we ultimately decided not to use it,
-            and instead build our own BSDF from scratch.
+            We created brand new hair BSDFs in Mitsuba, following the approaches of the Kajiya-Kay and Marschner models. Mitsuba provided the framework for ray tracing and hair intersection. Mitsuba came with a Kajiya-Kay styled phase function; however, it did not operate as a functional BSDF, and did not match up with the original SIGGRAPH paper we read. Thus, we ultimately decided not to use it, and instead build our own BSDF from scratch.
         </p>
+        <h5>Kajiya-Kay</h5>
         <p>
-            The basics of the Kajiya Kay BSDF are as follows. First, we define the following vectors:
+            The basics of our Kajiya-Kay BSDF are as follows. First, we define the following vectors:
         </p>
         <ul>
             <li><b>t:</b> tangent vector to the hair cylinder</li>
@@ -78,7 +79,7 @@
             <li><b>p:</b> exponent for specular lighting component</li>
         </ul>
         <p>
-            As shown in the model below, the incoming light is specularly reflected into the cone formed by taking
+            As shown in the model below, the incoming light to eye/camera is specularly reflected into the cone formed by taking
             the incoming light vector, reflecting it over the normal, and rotating it around the tangent. This
             outgoing ray is drawn with the label <i>e'</i>.
         </p>
@@ -86,8 +87,8 @@
             <table style="width=100%">
                 <tr>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kajiyakaymodel.png" align="middle" height="250px" />
-                        <figcaption align="middle">Kajiya Kay Model</figcaption>
+                        <img src="img/kajiyakaymodel.png" align="middle" height="360px" />
+                        <figcaption align="middle">Kajiya-Kay Model</figcaption>
                     </td>
                 </tr>
             </table>
@@ -113,118 +114,121 @@
             <table style="width=100%">
                 <tr>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kajiyakaydiffuse.png" align="middle" height="115px" />
-                        <figcaption align="middle">Kajiya Kay Diffuse Component</figcaption>
+                        <img src="img/kajiyakaydiffuse.png" align="middle" height="133px" />
+                        <figcaption align="middle">Kajiya-Kay Diffuse Component</figcaption>
                     </td>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kajiyakayspecular.png" align="middle" height="115px" />
-                        <figcaption align="middle">Kajiya Kay Specular Component</figcaption>
+                        <img src="img/kajiyakayspecular.png" align="middle" height="133px" />
+                        <figcaption align="middle">Kajiya-Kay Specular Component</figcaption>
                     </td>
                 </tr>
             </table>
         </div>
         <br>
-        <p>The next BSDF we sought to implement was the Marschner model. In it, hair follicles are modeled as rough,
-            cylindrical surfaces consisting of tilted cuticle scales. This model takes into account the detail
-            that incident light may be reflected one or more times before exiting the hair. Therefore, reflection is
-            broken down into three components:
-        </p>
-        <ul>
-            <li><b>R:</b> simple reflection</li>
-            <li><b>TT:</b> one transmission</li>
-            <li><b>TRT:</b> two transmissions</li>
-        </ul>
-        <p>The details of this process are best described by the diagrams below:</p>
-        <div align="middle">
-            <table style="width=100%">
-                <tr>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschnermodel0.png" align="middle" height="250px" />
-                        <figcaption align="middle">Marschner Model Diagram</figcaption>
-                    </td>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschnermodel1.png" align="middle" height="250px" />
-                        <figcaption align="middle">A Closer Look at an Individual Hair Fiber</figcaption>
-                    </td>
-                </tr>
-            </table>
+        <div id="marschner">
+            <h5>Marschner Model</h5>
+            <p>The second BSDF we sought to implement was the Marschner model. In it, hair follicles are modeled as rough,
+                cylindrical surfaces consisting of tilted cuticle scales. This model takes into account the detail
+                that incident light may be reflected one or more times before exiting the hair. Therefore, reflection is
+                broken down into three components:
+            </p>
+            <ul>
+                <li><b>R:</b> simple reflection</li>
+                <li><b>TT:</b> one transmission</li>
+                <li><b>TRT:</b> two transmissions</li>
+            </ul>
+            <p>The details of this process are best described by the diagrams below:</p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschnermodel0.png" align="middle" height="300px" />
+                            <figcaption align="middle">Marschner Model Diagram</figcaption>
+                        </td>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschnermodel1.png" align="middle" height="300px" />
+                            <figcaption align="middle">A Closer Look at an Individual Hair Fiber</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <br>
+            <p>
+                We tackled this problem by considering each scattering component individually, and summing them together,
+                as represented by the scattering function <i>f</i>.
+            </p>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschner_f.png" align="middle" height="100px" />
+                            <figcaption align="middle">Scattering Functions Summed</figcaption>
+                        </td>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschnerf_detailed.png" align="middle" height="100px" />
+                            <figcaption align="middle">A Closer Look at an Individual Scattering Component</figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <br>
+             <p>
+                Each component is broken down into three major components, each of which are calculated based on the
+                incoming and outgoing angle of reflectance. These are outlined below:
+            </p>
+            <ul>
+                <li>
+                    <b>M<sub>p</sub>:</b> describes the longitudinal scattering function.
+                </li>
+            </ul>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschner_m.png" align="middle" height="64px" />
+                            <figcaption align="middle"></figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <ul>
+                <li>
+                    <b>A<sub>p</sub>:</b> describes how incident light affects a scattering mode p. This component
+                    considers Fresnel reflection, transmission at hair-air boundary, and absorption (for <i>p >
+                    0</i>i>). It is responsible for the color of the hair fiber.
+                </li>
+            </ul>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschner_a.png" align="middle" height="64px" />
+                            <figcaption align="middle"></figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <ul>
+                <li>
+                    <b>N<sub>p</sub>:</b> describes the angular difference between the angle Φ and the third function
+                    shown below, which calculates the net change in azimuthal direction.
+                </li>
+            </ul>
+            <div align="middle">
+                <table style="width=100%">
+                    <tr>
+                        <td padding="10px 10px 10px 10px">
+                            <img src="img/marschner_n.png" align="middle" height="64px" />
+                            <figcaption align="middle"></figcaption>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
-        <br>
+        <h5>Dynamic Fur Rendering by Shells and Fins Model</h5>
         <p>
-            We tackled this problem by considering each scattering component individually, and summing them together,
-            as represented by the scattering function <i>f</i>.
-        </p>
-        <div align="middle">
-            <table style="width=100%">
-                <tr>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschner_f.png" align="middle" height="112px" />
-                        <figcaption align="middle">Scattering Functions Summed</figcaption>
-                    </td>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschnerf_detailed.png" align="middle" height="112px" />
-                        <figcaption align="middle">A Closer Look at an Individual Scattering Component</figcaption>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <br>
-         <p>
-            Each component is broken down into three major components, each of which are calculated based on the
-            incoming and outgoing angle of reflectance. These are outlined below:
-        </p>
-        <ul>
-            <li>
-                <b>M<sub>p</sub>:</b> describes the longitudinal scattering function.
-            </li>
-        </ul>
-        <div align="middle">
-            <table style="width=100%">
-                <tr>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschner_m.png" align="middle" height="92px" />
-                        <figcaption align="middle"></figcaption>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <ul>
-            <li>
-                <b>A<sub>p</sub>:</b> describes how incident light affects a scattering mode p. This component
-                considers Fresnel reflection, transmission at hair-air boundary, and absorption (for <i>p >
-                0</i>i>). It is responsible for the color of the hair fiber.
-            </li>
-        </ul>
-        <div align="middle">
-            <table style="width=100%">
-                <tr>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschner_a.png" align="middle" height="92px" />
-                        <figcaption align="middle"></figcaption>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <ul>
-            <li>
-                <b>N<sub>p</sub>:</b> describes the angular difference between the angle Φ and the third function
-                shown below, which calculates the net change in azimuthal direction.
-            </li>
-        </ul>
-        <div align="middle">
-            <table style="width=100%">
-                <tr>
-                    <td padding="10px 10px 10px 10px">
-                        <img src="img/marschner_n.png" align="middle" height="92px" />
-                        <figcaption align="middle"></figcaption>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        <br>
-        <p>
-            Lastly, we implemented our stretch goal of dynamic fur shading using the three.js framework. In order to
-            maximize performance, we utilize the "shell and fin" approach to dynamic fur rendering. This method uses
+            Lastly, we implemented our stretch goal of dynamic fur shading using WebGL and the three.js framework. In order to
+            maximize performance, we utilize the "shell and fin" <a href="nvidia">[NVIDIA, 4]</a> approach to dynamic fur rendering. This method uses
             multiple layers, or "shells," of the mesh and stacks them at different scales in order to simulate
             individual hair/fur fibers. Pixels are rendered according to a randomly generated hair distribution
             texture map at each layer. Starting from a simple bear model with a standard diffuse shader, as shown
@@ -235,7 +239,11 @@
                 <tr>
                     <td padding="10px 10px 10px 10px">
                         <img src="img/bear_diffuse.png" align="middle" height="400px" />
-                        <figcaption align="middle"></figcaption>
+                        <figcaption align="middle">Original bear mesh</figcaption>
+                    </td>
+                    <td padding="10px 10px 10px 10px">
+                        <img src="img/rigid_fur.png" align="middle" height="400px" />
+                        <figcaption align="middle">Random hair distribution, no deformation or alignment</figcaption>
                     </td>
                 </tr>
             </table>
@@ -256,32 +264,35 @@
             some controlled randomness. First, we tackled realistic shadows by implementing Phong shading. Since the
             shell-based fur fibers have no mesh or sense of normals, we needed to think out of the box in order to
             model shadow intersections. Therefore, we ultimately figured out that altering the Phong light intensity
-            on a per-pixel level produced the most accurate image. To calculate the relative height of a fur fiber
-            from the root, we took the layer number and divided it by the surface ratio.
+            on a per-pixel level produced the most accurate image. We scaled the light intensity relative to its proximity to the root of the hair, similarly to: <i>pow(layer/fullLength, 2).</i>
         </p>
         <p>
             Our final improvement came after noticing that random fiber lengths are unrealistic and unexciting at
-            such a high frequency/resolution image (2048x2048). Therefore, we multiplied the specularity texture map
-            and noise to create visually interesting, random hairs. After these improvements, we produced the
+            such a high frequency/resolution image (2048x2048). Therefore, we multiplied a modified specularity texture map (as a heuristic)
+            with our noise distribution together to create visually interesting, random hairs. After these improvements, we produced the
             following results:
         </p>
         <div align="middle">
             <table style="width=100%">
                 <tr>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/bear_1.png" align="middle" height="400px" />
+                        <img src="img/bear_final.png" align="middle" height="330px" />
                         <figcaption align="middle"></figcaption>
                     </td>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/bear_0.png" align="middle" height="400px" />
+                        <img src="img/bear_1.png" align="middle" height="330px" />
+                        <figcaption align="middle"></figcaption>
+                    </td>
+                    <td padding="10px 10px 10px 10px">
+                        <img src="img/bear_0.png" align="middle" height="330px" />
                         <figcaption align="middle"></figcaption>
                     </td>
                 </tr>
             </table>
         </div>
         <br>
-        <p>The detail and realism achieved by this method can be better seen and appreciated in our live demo,
-            linked below in the <a href="#results"><i>Results</i></a> section.</p>
+        <p>In terms of divergence from established models, using a modified-specular map as a hair distribution heuristic, parametrizing stiffness and sparsity, adjusting brightness of coat as function of hair length and sparsity, and applying wind force all diverged from those that we found online. The detail and realism achieved by this method can be better seen and appreciated in our live demo,
+            linked below in the <a href="#results"><i>results</i></a> section.</p>
         <hr>
         <h3 id="results">Results</h3>
         <p>
@@ -335,15 +346,15 @@
             <table style="width=100%">
                 <tr>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kk_fur_diff.png" align="middle" height="400px" />
+                        <img src="img/kk_fur_diff.png" align="middle" width="100%" />
                         <figcaption align="middle">Diffuse Component Only</figcaption>
                     </td>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kk_fur_spec.png" align="middle" height="400px" />
+                        <img src="img/kk_fur_spec.png" align="middle" width="100%" />
                         <figcaption align="middle">Specular Component Only</figcaption>
                     </td>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kk_fur.png" align="middle" height="400px" />
+                        <img src="img/kk_fur.png" align="middle" width="100%" />
                         <figcaption align="middle">Combined</figcaption>
                     </td>
                 </tr>
@@ -353,15 +364,15 @@
             <table style="width=100%">
                 <tr>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kk_curls_diff.png" align="middle" height="332px" />
+                        <img src="img/kk_curls_diff.png" align="middle" width="100%" />
                         <figcaption align="middle">Diffuse Component Only</figcaption>
                     </td>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kk_curls_spec.png" align="middle" height="332px" />
+                        <img src="img/kk_curls_spec.png" align="middle" width="100%" />
                         <figcaption align="middle">Specular Component Only</figcaption>
                     </td>
                     <td padding="10px 10px 10px 10px">
-                        <img src="img/kk_curls.png" align="middle" height="332px" />
+                        <img src="img/kk_curls.png" align="middle" width="100%" />
                         <figcaption align="middle">Combined</figcaption>
                     </td>
                 </tr>
@@ -372,10 +383,22 @@
             Lastly, below we provide a link to our dynamic fur shading demo and a video outlining the results of our
             final project.
         </p>
-        <a href="http://nickshen.me/184proj/web-fur/">Live Demo of Dynamic Fur Shading</a>
-        <p>INCLUDE LINK TO VIDEO</p>
+        <b><a href="http://nickshen.me/184proj/web-fur/" target="_blank">Interactive Demo of Dynamic Fur Shading (link)</a></b>
+        <div align="middle">
+            <table width="80%">
+                <tr>
+                    <td padding="10px 10px 10px 10px">
+                        <a href="http://nickshen.me/184proj/web-fur/" target="_blank"><img src="img/bear_closeup.png" align="middle" width="100%" />
+                        <figcaption align="middle">Closeup of Bear (click for demo)</figcaption></a>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-
+        <b><a href="https://youtu.be/FwE47vOtx3Y" target="_blank">
+            Final Showcase Video (Youtube Link)
+        </a></b><br>
+        <iframe width="900" height="600" src="https://www.youtube.com/embed/FwE47vOtx3Y" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
         <hr>
         <h3>Resources and References:</h3>
@@ -383,7 +406,7 @@
         <ol>
             <li>MacOS High Sierra (v 10,13,3), Shen</li>
             <li>Ubuntu 16.04, Briggs + Xia</li>
-            <li>Windows 10, Briggs (for GTX 1080)</li>
+            <li>Windows 10, Briggs (for GTX 1080), Shen (GTX 1060)</li>
         </ol>
         <h5>Hardware:</h5>
         <ol>
@@ -394,57 +417,58 @@
             <li>Mitsuba Renderer
                 <ol>
                     <li>Built using Mitsuba as a basic foundation for ray-tracing and ray-hair intersection:
-                        <a href="http://mitsuba-renderer.org">http://mitsuba-renderer.org</a></li>
+                        <a href="http://mitsuba-renderer.org" target="_blank">http://mitsuba-renderer.org</a></li>
                     <li>Benedikt Bitterli's Tungsten Hair Scenes converted to Mitsuba format:
-                        <a href="https://benedikt-bitterli.me/resources/">https://benedikt-bitterli.me/resources/</a></li>
+                        <a href="https://benedikt-bitterli.me/resources/" target="_blank">https://benedikt-bitterli.me/resources/</a></li>
                 </ol>
             </li>
             <li>C++ language and standard libraries</li>
             <li>Standard development IDEs</li>
             <li>WebGL for dynamic hair/fur rendering</li>
+            <li id="three">Three.js: <a href="https://threejs.org/" target="_blank">https://threejs.org/</a>, used heavily for interactive demo</li>
         </ol>
         <h5>References:</h5>
         <ol>
-            <li><b>Kajiya-Kay Model, SIGGRAPH, '89: </b>
-                <a href="https://www.cs.drexel.edu/~david/Classes/CS586/Papers/p271-kajiya.pdf">https://www.cs.drexel.edu/~david/Classes/CS586/Papers/p271-kajiya.pdf</a>
+            <li><b id="kkay">Kajiya-Kay Model, SIGGRAPH, '89: </b>
+                <a href="https://www.cs.drexel.edu/~david/Classes/CS586/Papers/p271-kajiya.pdf" target="_blank">https://www.cs.drexel.edu/~david/Classes/CS586/Papers/p271-kajiya.pdf</a>
                 <ol>
                     <li>Not very photorealistic</li>
                     <li>Low polygon approach to hair rendering, combines low-poly patches (not cylinders) with diffuse, ambient-occlusion, and specular values to model hair:
-                        <a href="http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2012/10/Scheuermann_HairSketchSlides.pdf">http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2012/10/Scheuermann_HairSketchSlides.pdf</a>
+                        <a href="http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2012/10/Scheuermann_HairSketchSlides.pdf" target="_blank">http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2012/10/Scheuermann_HairSketchSlides.pdf</a>
                     </li>
                 </ol>
             </li>
-            <li><b>Mitsuba Renderer</b>, implements ray tracing hair curvature already:
-                <a href="http://mitsuba-renderer.org">http://mitsuba-renderer.org</a>
+            <li><b id="mitsuba">Mitsuba Renderer</b>, implements ray tracing hair curvature already:
+                <a href="http://mitsuba-renderer.org" target="_blank">http://mitsuba-renderer.org</a>
             </li>
             <li><b>WebGL interactive/dynamic fur rendering</b> using three.js and this article:
-                <a href="http://oos.moxiecode.com/js_webgl/fur">http://oos.moxiecode.com/js_webgl/fur</a>
+                <a href="http://oos.moxiecode.com/js_webgl/fur" target="_blank">http://oos.moxiecode.com/js_webgl/fur</a>
             </li>
+            <li><b id="#nvidia">NVIDIA shells and fins fur model:</b><a href="http://developer.download.nvidia.com/SDK/10/direct3d/Source/Fur/doc/FurShellsAndFins.pdf" target="_blank">http://developer.download.nvidia.com/SDK/10/direct3d/Source/Fur/doc/FurShellsAndFins.pdf</a></li>
             <li><b>Human Hair vs. Animal Fur:</b>
-                <a href="https://cs184.eecs.berkeley.edu/lecture/advanced-materials/slide_043">https://cs184.eecs.berkeley.edu/lecture/advanced-materials/slide_043</a>
+                <a href="https://cs184.eecs.berkeley.edu/lecture/advanced-materials/slide_043" target="_blank">https://cs184.eecs.berkeley.edu/lecture/advanced-materials/slide_043</a>
                 <ol>
                     <li>Medulla small in humans, larger in animals, exaggerated in softer/higher brightness fur</li>
                 </ol>
             </li>
             <li><b>Disney's fur rendering model:</b>
-                <a href="https://benedikt-bitterli.me/pchfm/pchfm.pdf">https://benedikt-bitterli.me/pchfm/pchfm.pdf</a>
+                <a href="https://benedikt-bitterli.me/pchfm/pchfm.pdf" target="_blank">https://benedikt-bitterli.me/pchfm/pchfm.pdf</a>
             </li>
-            <li>"An Energy Conserving Hair Reflectance Model", <a href="http://www.eugenedeon.com/wp-content/uploads/2014/04/egsrhair.pdf">http://www.eugenedeon.com/wp-content/uploads/2014/04/egsrhair.pdf</a></li>
+            <li><b id="marsch">"An Energy Conserving Hair Reflectance Model"</b>, (Marschner) <a href="http://www.eugenedeon.com/wp-content/uploads/2014/04/egsrhair.pdf" target="_blank">http://www.eugenedeon.com/wp-content/uploads/2014/04/egsrhair.pdf</a></li>
             <li>Zinke-Weber: "Light Scattering From Filaments" (2007)</li> 
         </ol>
+        <hr>
         <h5>Contributions</h5>
         <ul>
             <li><b>Jonathan Briggs:</b> Focused mainly on Marschner implementation, but some assistance with
-                Kajiya-Kay method. Fixed compile errors and compatibility issues with Mitsuba Renderer. Wrote HTML
+                Kajiya-Kay method. Fixed compile/config errors and compatibility issues with Mitsuba Renderer. Wrote HTML
                 documents for project proposal and final report. Contributed to final presentation slides. Recorded
-                videos for project milestone and final
-                report.</li>
-            <li><b>Nick Shen:</b> Focused mainly on three.js implementation, but some assistance with Kajiya-Kay
-                method. Wrote HTML document for project milestone. Contributed to final presentation slides. Recorded
-                video for final report.</li>
+                videos for project milestone and final report.</li>
+            <li><b>Nick Shen:</b> Focused primarily on WebGL dynamic fur rendering, and interactive demo in three.js setting, but some assistance with Kajiya-Kay method. Contributed heavily to the Javascript/Shader code, HTML document for project milestone. Contributed to final presentation slides. Recorded and edited video for final report. Worked on script.</li>
             <li><b>Xiling Xia:</b> Focused mainly on Kajiya-Kay implementation, but some assistance with Marschner
-                model. Contributed to final presentation slides. Helped with script for video included in final report.</li>
+                model. Contributed heavily to the K-Kay BSDF and static rendering renders; contributed to final presentation slides. Helped with script for video included in final report.</li>
         </ul>
+        <p>All members each read papers of all three methods, and shared and collaborated in the understanding of each.</p>
 </body>
 
 </html>
